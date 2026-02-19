@@ -45,13 +45,40 @@ export default class MainScene extends Phaser.Scene {
             }
         });
 
-        // Add some trees
+        // 5. Trees (Physics Group for Overlap)
+        this.trees = this.physics.add.staticGroup();
+
         for (let i = 0; i < 30; i++) {
             const x = Phaser.Math.Between(200, 1800);
             const y = Phaser.Math.Between(200, 1800);
-            const tree = this.add.image(x, y, 'tree');
-            tree.setScale(0.15); // Scale trees to match dragon
+            const tree = this.trees.create(x, y, 'tree');
+            tree.setScale(0.15);
+            tree.refreshBody(); // Important for static bodies after scale change
         }
+
+        // 6. Inventory System
+        this.apples = 0;
+        this.lastAppleTime = 0;
+        this.coins = 0; // Initialize coins
+
+        // UI is now handled by UIScene, which we ensure is on top
+        this.scene.bringToTop('UIScene');
+
+        // 7. Overlap Check
+        this.physics.add.overlap(this.player, this.trees, this.collectApple, null, this);
+
+        // 8. Rocks (Physics Group for Overlap)
+        this.rocks = this.physics.add.staticGroup();
+
+        for (let i = 0; i < 20; i++) { // Spawn 20 rocks
+            const x = Phaser.Math.Between(200, 1800);
+            const y = Phaser.Math.Between(200, 1800);
+            const rock = this.rocks.create(x, y, 'rock');
+            rock.setScale(0.15);
+            rock.refreshBody();
+        }
+
+        this.physics.add.overlap(this.player, this.rocks, this.breakRock, null, this);
     }
 
     update() {
@@ -63,5 +90,29 @@ export default class MainScene extends Phaser.Scene {
                 this.target = null;
             }
         }
+    }
+
+    collectApple(player, tree) {
+        // Simple cooldown to prevent collecting too many apples at once
+        const now = this.time.now;
+        if (now - this.lastAppleTime > 2000) { // 2 seconds cooldown
+            this.apples++;
+            this.lastAppleTime = now;
+
+            // Emit Event to UIScene
+            this.events.emit('updateAppleCount', this.apples);
+            this.events.emit('collectAppleAnim');
+        }
+    }
+
+    breakRock(player, rock) {
+        // Destroy the rock
+        rock.destroy();
+
+        // Increment coin count
+        this.coins++;
+
+        // Emit Event to UIScene
+        this.events.emit('updateCoinCount', this.coins);
     }
 }

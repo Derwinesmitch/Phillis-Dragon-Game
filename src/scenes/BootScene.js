@@ -12,9 +12,14 @@ export default class BootScene extends Phaser.Scene {
         this.load.image('dragon', 'assets/dragon_pixel.png');
         this.load.image('tree', 'assets/tree_pixel.png');
         this.load.image('coin', 'assets/coin_pixel.png');
+        this.load.image('backpack', 'assets/backpack_pixel.png');
+        this.load.image('apple', 'assets/apple_pixel.png');
+        this.load.image('rock', 'assets/rock_pixel.png');
+        this.load.image('cart', 'assets/cart_pixel.png');
     }
 
     create() {
+        this.scene.launch('UIScene');
         this.scene.start('MainScene');
     }
 }

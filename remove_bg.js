@@ -11,15 +11,21 @@ async function processImage(filename) {
 
         // Get the top-left pixel color to use as key
         const bgColor = image.getPixelColor(0, 0);
+        const rBg = (bgColor >> 24) & 0xFF;
+        const gBg = (bgColor >> 16) & 0xFF;
+        const bBg = (bgColor >> 8) & 0xFF;
 
         // Scan and replace that color with transparent
         image.scan(0, 0, image.bitmap.width, image.bitmap.height, function (x, y, idx) {
             const thisColor = this.getPixelColor(x, y);
-            // Simple distance check could be added, but exacting matching is safer for pixel art
-            // if we prompted for solid background.
-            // Let's allow a tiny bit of variance for jpeg artifacts if any, though PNG is lossless.
+            const r = (thisColor >> 24) & 0xFF;
+            const g = (thisColor >> 16) & 0xFF;
+            const b = (thisColor >> 8) & 0xFF;
 
-            if (thisColor === bgColor) {
+            // Simple distance check
+            const dist = Math.sqrt(Math.pow(r - rBg, 2) + Math.pow(g - gBg, 2) + Math.pow(b - bBg, 2));
+
+            if (dist < 30) { // Tolerance for JPG artifacts
                 this.bitmap.data[idx + 0] = 0;
                 this.bitmap.data[idx + 1] = 0;
                 this.bitmap.data[idx + 2] = 0;
@@ -27,8 +33,16 @@ async function processImage(filename) {
             }
         });
 
-        await image.write(fullPath);
-        console.log(`Saved transparent: ${filename}`);
+        // Determine output path (force .png)
+        let outPath = fullPath;
+        if (fullPath.toLowerCase().endsWith('.jpg') || fullPath.toLowerCase().endsWith('.jpeg')) {
+            const ext = path.extname(fullPath);
+            const base = path.basename(fullPath, ext);
+            outPath = path.join(path.dirname(fullPath), `${base}_pixel.png`);
+        }
+
+        await image.write(outPath);
+        console.log(`Saved transparent: ${outPath}`);
     } catch (err) {
         console.error(`Error processing ${filename}:`, err);
     }
