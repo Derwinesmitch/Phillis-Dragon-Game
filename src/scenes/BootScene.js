@@ -20,7 +20,9 @@ export default class BootScene extends Phaser.Scene {
         this.load.image('dragon_fire', 'assets/dragon_fire.png');
         this.load.image('dragon_ice', 'assets/dragon_ice.png');
         this.load.image('dragon_storm', 'assets/dragon_storm.png');
+        this.load.image('dragon_water', 'assets/dragon_water.png');
         this.load.image('battle_arena', 'assets/battle_arena.png');
+        this.load.image('fireball', 'assets/fireball.png');
     }
 
     create() {

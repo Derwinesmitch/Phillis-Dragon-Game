@@ -161,7 +161,7 @@ export default class UIScene extends Phaser.Scene {
         this.storeContainer.setVisible(false);
 
         // Background
-        const bg = this.add.rectangle(0, 0, 500, 400, 0x2a1a08, 0.95); // Dark brown wood style
+        const bg = this.add.rectangle(0, 0, 700, 450, 0x2a1a08, 0.95); // Wider for more dragons
         bg.setStrokeStyle(4, 0xd4af37); // Gold border
         this.storeContainer.add(bg);
 
@@ -181,15 +181,96 @@ export default class UIScene extends Phaser.Scene {
         }).setOrigin(0.5);
         this.storeContainer.add(closeHint);
 
+        // Store Items
+        this.renderStoreItems();
+
         // Toggle Logic
         this.cart.on('pointerdown', () => {
             this.toggleStore();
         });
     }
 
+    renderStoreItems() {
+        // Clear existing items if any
+        if (this.storeItemsContainer) this.storeItemsContainer.destroy();
+        this.storeItemsContainer = this.add.container(0, 0);
+        this.storeContainer.add(this.storeItemsContainer);
+
+        const items = [
+            { name: 'Fire Dragon', key: 'dragon_fire', cost: 20 },
+            { name: 'Ice Dragon', key: 'dragon_ice', cost: 30 },
+            { name: 'Thunder Dragon', key: 'dragon_storm', cost: 40 },
+            { name: 'Water Dragon', key: 'dragon_water', cost: 50 }
+        ];
+
+        const mainScene = this.scene.get('MainScene');
+
+        items.forEach((item, index) => {
+            const x = -255 + (index * 170); // Adjusted for 4 items
+            const y = -30;
+
+            const itemBg = this.add.rectangle(x, y, 120, 180, 0x3d2b1f).setStrokeStyle(2, 0xd4af37);
+            
+            const dragonImg = this.add.image(x, y - 30, item.key).setScale(0.1);
+            const nameText = this.add.text(x, y + 25, item.name, { fontSize: '16px', fill: '#ffffff' }).setOrigin(0.5);
+            const costText = this.add.text(x, y + 45, `${item.cost} Coins`, { fontSize: '14px', fill: '#FFD700' }).setOrigin(0.5);
+
+            const alreadyOwned = mainScene.ownedDragons.some(d => d.key === item.key);
+            const btnText = alreadyOwned ? 'OWNED' : 'BUY';
+            const btnColor = alreadyOwned ? '#555555' : (mainScene.coins >= item.cost ? '#00aa00' : '#aa0000');
+
+            const buyBtn = this.add.text(x, y + 75, btnText, {
+                fontSize: '18px',
+                fill: '#ffffff',
+                backgroundColor: btnColor,
+                padding: { x: 10, y: 5 }
+            }).setOrigin(0.5);
+
+            if (!alreadyOwned && mainScene.coins >= item.cost) {
+                buyBtn.setInteractive({ useHandCursor: true });
+                buyBtn.on('pointerdown', () => this.buyDragon(item));
+            }
+
+            this.storeItemsContainer.add([itemBg, dragonImg, nameText, costText, buyBtn]);
+        });
+    }
+
+    buyDragon(item) {
+        const mainScene = this.scene.get('MainScene');
+        if (mainScene.coins >= item.cost) {
+            mainScene.coins -= item.cost;
+            mainScene.ownedDragons.push({ name: item.name, key: item.key });
+            
+            // Update HUD
+            this.updateCoinCount(mainScene.coins);
+            
+            // Re-render store to update "BUY" to "OWNED"
+            this.renderStoreItems();
+
+            // Feedback
+            const feedback = this.add.text(400, 100, `Bought ${item.name}!`, {
+                fontSize: '24px',
+                fill: '#00ff00',
+                backgroundColor: '#000000'
+            }).setOrigin(0.5);
+
+            this.tweens.add({
+                targets: feedback,
+                y: 50,
+                alpha: 0,
+                duration: 2000,
+                onComplete: () => feedback.destroy()
+            });
+        }
+    }
+
     toggleStore() {
         this.storeOpen = !this.storeOpen;
         this.storeContainer.setVisible(this.storeOpen);
+
+        if (this.storeOpen) {
+            this.renderStoreItems(); // Refresh on open
+        }
 
         // Close inventory if open
         if (this.storeOpen && this.inventoryOpen) {
@@ -537,11 +618,8 @@ export default class UIScene extends Phaser.Scene {
         const title = this.add.text(0, -120, 'Choose Dragon', { fontSize: '24px', fill: '#ffffff' }).setOrigin(0.5);
         overlay.add(title);
 
-        const options = [
-            { name: 'Fire Dragon', key: 'dragon_fire' },
-            { name: 'Ice Dragon', key: 'dragon_ice' },
-            { name: 'Storm Dragon', key: 'dragon_storm' }
-        ];
+        const mainScene = this.scene.get('MainScene');
+        const options = mainScene.ownedDragons || [{ name: 'Phillis', key: 'dragon' }];
 
         options.forEach((opt, idx) => {
             const y = -40 + (idx * 60);
@@ -570,9 +648,9 @@ export default class UIScene extends Phaser.Scene {
     }
 
     handleStartBattle() {
-        // Find the first selected dragon in the team
-        const playerDragon = this.selectedTeam.find(t => t !== null);
-        if (!playerDragon) return;
+        // Filter out null slots
+        const team = this.selectedTeam.filter(t => t !== null);
+        if (team.length === 0) return;
 
         // Pause current gameplay
         this.scene.pause('MainScene');
@@ -582,8 +660,7 @@ export default class UIScene extends Phaser.Scene {
         this.scene.launch('BattleScene', { 
             opponentName: this.selectedOpponent.name, 
             opponentKey: this.selectedOpponent.key,
-            playerName: playerDragon.name,
-            playerKey: playerDragon.key
+            playerTeam: team
         });
 
         // Reset for next time

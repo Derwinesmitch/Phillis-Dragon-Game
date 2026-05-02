@@ -42,11 +42,16 @@ export default class MainScene extends Phaser.Scene {
         this.trees = this.physics.add.staticGroup();
 
         for (let i = 0; i < 30; i++) {
-            const x = Phaser.Math.Between(200, 1800);
-            const y = Phaser.Math.Between(200, 1800);
+            let x, y, distance;
+            do {
+                x = Phaser.Math.Between(200, 1800);
+                y = Phaser.Math.Between(200, 1800);
+                distance = Phaser.Math.Distance.Between(x, y, 1000, 1000);
+            } while (distance < 150); // Keep trees away from spawn point
+
             const tree = this.trees.create(x, y, 'tree');
             tree.setScale(0.15);
-            tree.refreshBody(); // Important for static bodies after scale change
+            tree.refreshBody();
         }
 
         // 6. Inventory & Stats System
@@ -63,6 +68,11 @@ export default class MainScene extends Phaser.Scene {
             xp: 0
         };
 
+        // Owned Dragons (Team selection will use this)
+        this.ownedDragons = [
+            { name: 'Phillis', key: 'dragon' }
+        ];
+
         // 7. Overlap Check
         this.physics.add.overlap(this.player, this.trees, this.collectApple, null, this);
 
@@ -70,8 +80,13 @@ export default class MainScene extends Phaser.Scene {
         this.rocks = this.physics.add.staticGroup();
 
         for (let i = 0; i < 20; i++) { // Spawn 20 rocks
-            const x = Phaser.Math.Between(200, 1800);
-            const y = Phaser.Math.Between(200, 1800);
+            let x, y, distance;
+            do {
+                x = Phaser.Math.Between(200, 1800);
+                y = Phaser.Math.Between(200, 1800);
+                distance = Phaser.Math.Distance.Between(x, y, 1000, 1000);
+            } while (distance < 150);
+
             const rock = this.rocks.create(x, y, 'rock');
             rock.setScale(0.15);
             rock.refreshBody();
